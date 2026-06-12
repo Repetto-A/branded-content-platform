@@ -2,7 +2,7 @@ import { FatalError, RetryableError, getStepMetadata } from "workflow"
 import { generateText, generateImage } from "ai"
 import { createGateway } from "@ai-sdk/gateway"
 import { google } from "@ai-sdk/google"
-import { uploadImageToBlob } from "@/lib/blob-storage"
+import { uploadImageToSupabase } from "@/lib/blob-storage"
 import { GEMINI_TEXT_MODELS } from "@/components/image-combiner/model-catalog"
 import type { ModelType, ThinkingLevel, Resolution, Quality } from "@/components/image-combiner/types"
 
@@ -294,7 +294,7 @@ async function executeNativeImage(input: {
   }
 }
 
-async function uploadToBlob(input: {
+async function uploadToStorage(input: {
   base64: string
   mediaType: string
   mode: string
@@ -308,7 +308,7 @@ async function uploadToBlob(input: {
   const filename = `${prefix}-${stepId}.${extension}`
 
   // Let errors propagate so the step retries automatically
-  return await uploadImageToBlob(imageUrl, filename)
+  return await uploadImageToSupabase(imageUrl, filename)
 }
 
 // --- Main workflow function ---
@@ -376,15 +376,15 @@ export async function generateImageWorkflow(input: GenerateImageInput): Promise<
     tokens: genResult.totalTokens,
   })
 
-  // Step 2: Upload to blob storage
-  const blobUrl = await uploadToBlob({
+  // Step 2: Upload to Supabase Storage
+  const storageUrl = await uploadToStorage({
     base64: genResult.base64,
     mediaType: genResult.mediaType,
     mode: input.mode,
   })
 
   return {
-    url: blobUrl,
+    url: storageUrl,
     prompt: input.prompt,
     description: genResult.text,
     durationMs,

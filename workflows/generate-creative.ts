@@ -1,5 +1,5 @@
 import { createWebhook, FatalError, sleep } from "workflow"
-import { mirrorRemoteAssetToBlob } from "@/lib/branded-content/blob"
+import { mirrorRemoteAssetToSupabase } from "@/lib/branded-content/blob"
 import { HashiWorkflowProvider, extractHashiResult, getWorkflowConfigForOutputType } from "@/lib/branded-content/providers/hashi"
 import {
   replaceCreativeOutputs,
@@ -82,7 +82,7 @@ async function persistReadyState(input: {
 
     if (finalUrl && (output.type === "image" || output.type === "video")) {
       try {
-        finalUrl = await mirrorRemoteAssetToBlob(finalUrl, `creative-output-${input.jobId}-${i + 1}`)
+        finalUrl = await mirrorRemoteAssetToSupabase(finalUrl, `creative-output-${input.jobId}-${i + 1}`)
       } catch {
         // keep provider URL if mirroring fails
       }

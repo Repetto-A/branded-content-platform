@@ -1,4 +1,6 @@
-import { put } from "@vercel/blob"
+import { getSupabaseServerClient } from "@/lib/supabase/server"
+
+const DEFAULT_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "branded-content"
 
 function inferExtensionFromContentType(contentType: string | null) {
   if (!contentType) return "bin"
@@ -12,7 +14,7 @@ function inferExtensionFromContentType(contentType: string | null) {
   return "bin"
 }
 
-export async function mirrorRemoteAssetToBlob(url: string, filenamePrefix: string) {
+export async function mirrorRemoteAssetToSupabase(url: string, filenamePrefix: string) {
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Failed to fetch remote asset: ${response.status}`)
@@ -21,12 +23,22 @@ export async function mirrorRemoteAssetToBlob(url: string, filenamePrefix: strin
   const contentType = response.headers.get("content-type") || "application/octet-stream"
   const arrayBuffer = await response.arrayBuffer()
   const extension = inferExtensionFromContentType(contentType)
-  const file = new Blob([arrayBuffer], { type: contentType })
-  const uploaded = await put(`${filenamePrefix}.${extension}`, file, {
-    access: "public",
-    contentType,
-    addRandomSuffix: true,
-  })
+  const objectPath = `creative-outputs/${Date.now()}-${filenamePrefix}.${extension}`
 
-  return uploaded.url
+  const supabase = getSupabaseServerClient()
+  const bucket = DEFAULT_STORAGE_BUCKET
+  const { error: uploadError } = await supabase.storage.from(bucket).upload(objectPath, arrayBuffer, {
+    contentType,
+    upsert: false,
+    cacheControl: "3600",
+  })
+  if (uploadError) {
+    throw new Error(`Failed to mirror provider asset to Supabase Storage: ${uploadError.message}`)
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath)
+  return data.publicUrl
 }
+
+// Backward-compatible export while callers are migrated.
+export const mirrorRemoteAssetToBlob = mirrorRemoteAssetToSupabase

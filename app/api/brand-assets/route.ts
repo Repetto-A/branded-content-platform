@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { put } from "@vercel/blob"
 import { createBrandAsset } from "@/lib/branded-content/repository"
+import { getSupabaseServerClient } from "@/lib/supabase/server"
 import type { BrandAssetType, BrandAssetUsage } from "@/lib/branded-content/types"
 
 const VALID_TYPES = new Set<BrandAssetType>([
@@ -13,6 +13,21 @@ const VALID_TYPES = new Set<BrandAssetType>([
 ])
 
 const VALID_USAGES = new Set<BrandAssetUsage>(["always", "optional", "provider_reference", "internal_context"])
+const DEFAULT_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "branded-content"
+
+function safeName(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9._-]/g, "-")
+}
+
+function extensionFromFile(file: File) {
+  const fromName = file.name.split(".").pop()?.toLowerCase()
+  if (fromName) return fromName
+  if (file.type.includes("jpeg")) return "jpg"
+  if (file.type.includes("png")) return "png"
+  if (file.type.includes("webp")) return "webp"
+  if (file.type.includes("gif")) return "gif"
+  return "bin"
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,13 +49,24 @@ export async function POST(request: NextRequest) {
 
     let url = providedUrl
     if (file) {
-      const bytes = await file.arrayBuffer()
-      const uploaded = await put(`brand-asset-${brandId}-${file.name}`, new Blob([bytes], { type: file.type }), {
-        access: "public",
-        contentType: file.type,
-        addRandomSuffix: true,
+      const arrayBuffer = await file.arrayBuffer()
+      const extension = extensionFromFile(file)
+      const fileBaseName = safeName(file.name.replace(/\.[^.]+$/, ""))
+      const objectPath = `brand-assets/${brandId}/${Date.now()}-${fileBaseName}.${extension}`
+
+      const supabase = getSupabaseServerClient()
+      const bucket = DEFAULT_STORAGE_BUCKET
+      const { error: uploadError } = await supabase.storage.from(bucket).upload(objectPath, arrayBuffer, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+        cacheControl: "3600",
       })
-      url = uploaded.url
+      if (uploadError) {
+        throw new Error(`Failed to upload brand asset to Supabase Storage: ${uploadError.message}`)
+      }
+
+      const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath)
+      url = data.publicUrl
     }
 
     if (!url) {

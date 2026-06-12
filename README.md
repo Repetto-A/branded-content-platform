@@ -8,7 +8,7 @@ A multi-model AI image generation playground powered by [Vercel AI Gateway](http
 - **Per-model aspect ratios** — the selector only offers ratios each model supports; switching models snaps to the closest.
 - **GPT quality control**, Gemini thinking/resolution/grounding.
 - **Text-to-image and image editing** (drag & drop or paste a URL).
-- Generated images are stored in **Vercel Blob**; history is kept in your browser (localStorage).
+- Generated images and brand assets are stored in **Supabase Storage**; history is kept in your browser (localStorage).
 
 ## Setup
 
@@ -31,7 +31,9 @@ A multi-model AI image generation playground powered by [Vercel AI Gateway](http
    | Variable | Required | Description |
    |----------|----------|-------------|
    | `AI_GATEWAY_API_KEY` | Yes | Your [Vercel AI Gateway](https://vercel.com/ai-gateway) API key — every generation is billed to it |
-   | `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob token where generated images are stored |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service-role key used by server workflows/uploads |
+   | `SUPABASE_STORAGE_BUCKET` | Optional | Storage bucket name (defaults to `branded-content`) |
 
 3. **Run**
 
@@ -47,4 +49,4 @@ The app runs each generation as a durable [Vercel Workflow](https://vercel.com/d
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel-labs/v0-nanobanana-template)
 
-Add `AI_GATEWAY_API_KEY` and attach **Blob** storage (which provides `BLOB_READ_WRITE_TOKEN`) in your Vercel project settings.
+Add `AI_GATEWAY_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and (optionally) `SUPABASE_STORAGE_BUCKET` in your Vercel project settings.

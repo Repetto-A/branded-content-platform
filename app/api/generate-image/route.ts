@@ -18,8 +18,13 @@ function isAllowedImageUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     if (parsed.protocol !== "https:") return false
+    const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+      : null
+
     return parsed.hostname.endsWith(".public.blob.vercel-storage.com") ||
       parsed.hostname.endsWith(".googleusercontent.com") ||
+      (supabaseHost !== null && parsed.hostname === supabaseHost) ||
       parsed.hostname === "generativelanguage.googleapis.com"
   } catch {
     return false
@@ -50,15 +55,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generated images are saved to Vercel Blob. Without a token the workflow
-    // would generate the image (billing the AI Gateway) and then fail on upload,
-    // so we fail fast here with an actionable message instead.
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    // Generated images are saved to Supabase Storage. Without Supabase config,
+    // the workflow would generate the image (billing the AI Gateway) and fail on upload.
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json<ErrorResponse>(
         {
-          error: "Blob storage is not configured",
+          error: "Supabase storage is not configured",
           details:
-            "BLOB_READ_WRITE_TOKEN is missing. Connect Vercel Blob storage to this project (Project Settings → Storage → Blob) so generated images can be saved.",
+            "NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing. Configure Supabase credentials so generated images can be saved.",
         },
         { status: 500 },
       )

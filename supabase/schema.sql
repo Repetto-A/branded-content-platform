@@ -1,5 +1,33 @@
 create extension if not exists "pgcrypto";
 
+insert into storage.buckets (id, name, public)
+values ('branded-content', 'branded-content', true)
+on conflict (id) do nothing;
+
+do $$
+begin
+  alter table storage.objects enable row level security;
+
+  drop policy if exists "Public read branded-content objects" on storage.objects;
+  create policy "Public read branded-content objects"
+  on storage.objects
+  for select
+  to public
+  using (bucket_id = 'branded-content');
+
+  drop policy if exists "Service role manages branded-content objects" on storage.objects;
+  create policy "Service role manages branded-content objects"
+  on storage.objects
+  for all
+  to service_role
+  using (bucket_id = 'branded-content')
+  with check (bucket_id = 'branded-content');
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping storage.objects RLS/policy setup because current role is not the table owner.';
+end
+$$;
+
 create table if not exists brands (
   id uuid primary key default gen_random_uuid(),
   name text not null,
