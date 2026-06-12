@@ -31,7 +31,7 @@ function getStatusMessage(elapsed: number): string | null {
 export function ProgressBar({ progress, onCancel }: ProgressBarProps) {
   const barRef = useRef<HTMLDivElement>(null)
   const currentRef = useRef(progress) // Start at current value — no animation from 0
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const elapsed = useElapsedSeconds()
   const statusMessage = getStatusMessage(elapsed)
 

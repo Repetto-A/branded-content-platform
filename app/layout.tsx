@@ -26,7 +26,7 @@ const geistPixel = localFont({
 })
 
 export const metadata: Metadata = {
-  title: "Img Gen Playground",
+  title: "Branded Content Studio",
   description:
     "Img Gen Playground is a free AI image generator that creates images from text prompts and edits existing images. Powered by Google Gemini, it supports multiple aspect ratios (1:1, 16:9, 9:16, 4:3, 3:4) and offers both Pro (high quality) and Classic (faster) generation modes. No watermarks, free to use.",
   keywords: [
