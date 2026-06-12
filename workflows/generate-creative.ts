@@ -105,27 +105,6 @@ async function persistReadyState(input: {
   })
 }
 
-/**
- * Vercel Deployment Protection blocks the workflow callback webhook with a 401
- * SSO page, so Hashi can never deliver its result. When "Protection Bypass for
- * Automation" is enabled, Vercel exposes VERCEL_AUTOMATION_BYPASS_SECRET — we
- * append it to the callback URL so the automated POST is allowed through while
- * the rest of the deployment stays protected. No-op when the secret is absent
- * (local dev, or protection disabled).
- */
-function withProtectionBypass(url: string) {
-  const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
-  if (!secret) return url
-  try {
-    const parsed = new URL(url)
-    parsed.searchParams.set("x-vercel-protection-bypass", secret)
-    parsed.searchParams.set("x-vercel-set-bypass-cookie", "true")
-    return parsed.toString()
-  } catch {
-    return url
-  }
-}
-
 function getTimeoutForOutputType(outputType: CreativeOutputType) {
   switch (outputType) {
     case "single_image":
@@ -153,7 +132,7 @@ export async function generateCreativeWorkflow(input: GenerateCreativeWorkflowIn
   const provider = new HashiWorkflowProvider()
   const providerResult = await provider.createJob({
     ...input,
-    callbackUrl: withProtectionBypass(callbackWebhook.url),
+    callbackUrl: callbackWebhook.url,
   })
 
   await persistRunningState({
