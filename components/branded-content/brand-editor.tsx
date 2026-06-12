@@ -35,7 +35,7 @@ export function BrandEditor() {
     }
 
     load().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load brand")
+      setError(loadError instanceof Error ? loadError.message : "No se pudo cargar la marca")
     })
   }, [])
 
@@ -51,11 +51,11 @@ export function BrandEditor() {
       })
       const json = await response.json()
       if (!response.ok) {
-        throw new Error(json.details || json.error || "Failed to save brand")
+        throw new Error(json.details || json.error || "No se pudo guardar la marca")
       }
       setBundle(json)
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save brand")
+      setError(saveError instanceof Error ? saveError.message : "No se pudo guardar la marca")
     } finally {
       setSaving(false)
     }
@@ -78,7 +78,7 @@ export function BrandEditor() {
       })
       const json = await response.json()
       if (!response.ok) {
-        throw new Error(json.details || json.error || "Failed to upload asset")
+        throw new Error(json.details || json.error || "No se pudo subir el archivo")
       }
       setBundle((current) =>
         current
@@ -89,7 +89,7 @@ export function BrandEditor() {
           : current,
       )
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Failed to upload asset")
+      setError(uploadError instanceof Error ? uploadError.message : "No se pudo subir el archivo")
     } finally {
       setUploading(false)
     }
@@ -116,7 +116,7 @@ export function BrandEditor() {
         })
         const json = await response.json()
         if (!response.ok) {
-          throw new Error(json.details || json.error || "Failed to upload asset")
+          throw new Error(json.details || json.error || "No se pudo subir el archivo")
         }
 
         setBundle((current) =>
@@ -134,7 +134,7 @@ export function BrandEditor() {
             : current,
         )
       } catch (uploadError) {
-        setError(uploadError instanceof Error ? uploadError.message : "Failed to upload asset")
+        setError(uploadError instanceof Error ? uploadError.message : "No se pudo subir el archivo")
       } finally {
         setUploading(false)
       }
@@ -149,11 +149,11 @@ export function BrandEditor() {
       })
       const json = await response.json()
       if (!response.ok) {
-        throw new Error(json.details || json.error || "Failed to delete asset")
+        throw new Error(json.details || json.error || "No se pudo borrar el archivo")
       }
       if (json.bundle) setBundle(json.bundle as BrandBundle)
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete asset")
+      setError(deleteError instanceof Error ? deleteError.message : "No se pudo borrar el archivo")
     } finally {
       setUploading(false)
     }
@@ -183,25 +183,25 @@ export function BrandEditor() {
         })
         const json = await response.json()
         if (!response.ok) {
-          throw new Error(json.details || json.error || "Failed to remove image")
+          throw new Error(json.details || json.error || "No se pudo quitar la imagen")
         }
         setBundle(json as BrandBundle)
       } catch (removeError) {
-        setError(removeError instanceof Error ? removeError.message : "Failed to remove image")
+        setError(removeError instanceof Error ? removeError.message : "No se pudo quitar la imagen")
       } finally {
         setUploading(false)
       }
     }
 
   if (!bundle) {
-    return <div className="p-8 text-sm text-muted-foreground">Loading brand profile...</div>
+    return <div className="p-8 text-sm text-muted-foreground">Cargando perfil de marca…</div>
   }
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10 md:px-8">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <span className="eyebrow">Brand setup</span>
+          <span className="eyebrow">Configuración de marca</span>
           <h1 className="text-3xl font-semibold tracking-tight">
             Identidad de <span className="text-brand-gradient">{bundle.brand.name || "tu marca"}</span>
           </h1>
@@ -218,7 +218,7 @@ export function BrandEditor() {
         <CardContent className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>Nombre</Label>
               <Input
                 value={bundle.brand.name}
                 onChange={(event) =>
@@ -229,7 +229,7 @@ export function BrandEditor() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Website URL</Label>
+              <Label>Sitio web</Label>
               <Input
                 value={bundle.brand.websiteUrl ?? ""}
                 onChange={(event) =>
@@ -242,7 +242,7 @@ export function BrandEditor() {
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>Descripción</Label>
             <Textarea
               rows={3}
               value={bundle.brand.description ?? ""}
@@ -256,7 +256,7 @@ export function BrandEditor() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Tone (comma separated)</Label>
+              <Label>Tono (separado por comas)</Label>
               <Input
                 value={(bundle.profile.voice.tone ?? []).join(", ")}
                 onChange={(event) =>
@@ -275,7 +275,7 @@ export function BrandEditor() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Avoid (comma separated)</Label>
+              <Label>Evitar (separado por comas)</Label>
               <Input
                 value={(bundle.profile.voice.avoid ?? []).join(", ")}
                 onChange={(event) =>
@@ -297,7 +297,7 @@ export function BrandEditor() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Visual mood (comma separated)</Label>
+              <Label>Mood visual (separado por comas)</Label>
               <Input
                 value={(bundle.profile.visualStyle.mood ?? []).join(", ")}
                 onChange={(event) =>
@@ -316,7 +316,7 @@ export function BrandEditor() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Forbidden styles (comma separated)</Label>
+              <Label>Estilos prohibidos (separado por comas)</Label>
               <Input
                 value={(bundle.profile.visualStyle.forbiddenStyles ?? []).join(", ")}
                 onChange={(event) =>
@@ -340,7 +340,7 @@ export function BrandEditor() {
           </div>
 
           <div className="space-y-2">
-            <Label>Context summary</Label>
+            <Label>Resumen de contexto</Label>
             <Textarea
               rows={4}
               value={bundle.profile.contextSummary}

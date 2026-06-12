@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...(body.metadata ?? {}),
         warnings,
+        ...(body.referenceImageUrls?.length ? { referenceImageUrls: body.referenceImageUrls } : {}),
       },
     })
 

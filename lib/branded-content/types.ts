@@ -124,6 +124,8 @@ export interface CreativeRequestInput {
   cta?: string
   campaignContext?: string
   referenceAssetIds?: string[]
+  /** Ephemeral per-request reference image URLs (not stored as brand assets). */
+  referenceImageUrls?: string[]
   metadata?: Record<string, unknown>
 }
 

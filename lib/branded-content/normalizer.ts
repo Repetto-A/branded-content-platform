@@ -51,7 +51,15 @@ export function normalizeCreativeBrief(input: CreativeRequestInput, bundle: Bran
     })
   }
 
-  const referenceAssets = [...selectedReferenceAssets, ...fallbackReferenceAssets].filter(
+  // Ephemeral per-request reference images: not brand assets, just URLs the
+  // user attached for this single piece (e.g. a specific jacket to advertise).
+  const requestReferenceAssets = (input.referenceImageUrls ?? []).map((url) => ({
+    type: "reference_image" as const,
+    url,
+    usage: "provider_reference" as const,
+  }))
+
+  const referenceAssets = [...requestReferenceAssets, ...selectedReferenceAssets, ...fallbackReferenceAssets].filter(
     (asset, index, assets) => assets.findIndex((candidate) => candidate.url === asset.url && candidate.type === asset.type) === index,
   )
 
