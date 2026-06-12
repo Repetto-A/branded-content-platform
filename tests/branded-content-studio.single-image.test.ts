@@ -163,7 +163,7 @@ describe("Branded Content Studio - single image branding", () => {
     expect(warnings).toContain("Brand requires a logo but no logo asset is configured.")
   })
 
-  it.fails("uses brand.logoUrl as fallback when no logo asset exists", () => {
+  it("uses brand.logoUrl as fallback when no logo asset exists", () => {
     const bundleWithLogoOnlyInBrand: BrandBundle = {
       ...vivaBrandBundle,
       assets: vivaBrandBundle.assets.filter((asset) => asset.type !== "logo"),

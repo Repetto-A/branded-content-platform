@@ -32,11 +32,34 @@ export function normalizeCreativeBrief(input: CreativeRequestInput, bundle: Bran
     (input.referenceAssetIds ?? []).includes(asset.id) || asset.usage === "always",
   )
 
+  const fallbackReferenceAssets = []
+  const hasLogoAsset = selectedReferenceAssets.some((asset) => asset.type === "logo")
+  if (!hasLogoAsset && bundle.brand.logoUrl) {
+    fallbackReferenceAssets.push({
+      type: "logo" as const,
+      url: bundle.brand.logoUrl,
+      usage: "always" as const,
+    })
+  }
+
+  const hasMascotAsset = selectedReferenceAssets.some((asset) => asset.type === "mascot" || asset.type === "avatar")
+  if (!hasMascotAsset && bundle.brand.mascotAssetUrl) {
+    fallbackReferenceAssets.push({
+      type: "mascot" as const,
+      url: bundle.brand.mascotAssetUrl,
+      usage: "provider_reference" as const,
+    })
+  }
+
+  const referenceAssets = [...selectedReferenceAssets, ...fallbackReferenceAssets].filter(
+    (asset, index, assets) => assets.findIndex((candidate) => candidate.url === asset.url && candidate.type === asset.type) === index,
+  )
+
   const brief: CreativeBrief = {
     outputType: input.outputType,
     userRequest: input.userPrompt,
     brandContext,
-    referenceAssets: selectedReferenceAssets.map((asset) => ({
+    referenceAssets: referenceAssets.map((asset) => ({
       type: asset.type,
       url: asset.url,
       usage: asset.usage,

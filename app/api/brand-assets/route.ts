@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createBrandAsset } from "@/lib/branded-content/repository"
+import { createBrandAsset, updateBrandBundle } from "@/lib/branded-content/repository"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import type { BrandAssetType, BrandAssetUsage } from "@/lib/branded-content/types"
 
@@ -82,7 +82,22 @@ export async function POST(request: NextRequest) {
       description: description || null,
     })
 
-    return NextResponse.json({ asset })
+    let brand = undefined
+    if (type === "logo") {
+      const updatedBundle = await updateBrandBundle(brandId, {
+        brand: { logoUrl: url },
+        profile: {},
+      })
+      brand = updatedBundle.brand
+    } else if (type === "mascot" || type === "avatar") {
+      const updatedBundle = await updateBrandBundle(brandId, {
+        brand: { mascotAssetUrl: url },
+        profile: {},
+      })
+      brand = updatedBundle.brand
+    }
+
+    return NextResponse.json({ asset, brand })
   } catch (error) {
     return NextResponse.json(
       {

@@ -60,7 +60,7 @@ export function BrandEditor() {
     }
   }
 
-  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleReferenceUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!bundle || !event.target.files?.[0]) return
     setUploading(true)
     setError(null)
@@ -93,6 +93,52 @@ export function BrandEditor() {
       setUploading(false)
     }
   }
+
+  const handleBrandImageUpload =
+    (options: { type: "logo" | "mascot" | "avatar"; usage: "always" | "provider_reference"; brandField: "logoUrl" | "mascotAssetUrl" }) =>
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      if (!bundle || !event.target.files?.[0]) return
+      setUploading(true)
+      setError(null)
+
+      try {
+        const file = event.target.files[0]
+        const formData = new FormData()
+        formData.append("brandId", bundle.brand.id)
+        formData.append("type", options.type)
+        formData.append("usage", options.usage)
+        formData.append("label", file.name)
+        formData.append("file", file)
+
+        const response = await fetch("/api/brand-assets", {
+          method: "POST",
+          body: formData,
+        })
+        const json = await response.json()
+        if (!response.ok) {
+          throw new Error(json.details || json.error || "Failed to upload asset")
+        }
+
+        setBundle((current) =>
+          current
+            ? {
+                ...current,
+                brand: json.brand
+                  ? json.brand
+                  : {
+                      ...current.brand,
+                      [options.brandField]: json.asset.url,
+                    },
+                assets: [json.asset as BrandAsset, ...current.assets],
+              }
+            : current,
+        )
+      } catch (uploadError) {
+        setError(uploadError instanceof Error ? uploadError.message : "Failed to upload asset")
+      } finally {
+        setUploading(false)
+      }
+    }
 
   if (!bundle) {
     return <div className="p-8 text-sm text-muted-foreground">Loading brand profile...</div>
@@ -244,39 +290,56 @@ export function BrandEditor() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Logo URL</Label>
+              <Label>Logo</Label>
+              {bundle.brand.logoUrl ? (
+                <div className="space-y-2">
+                  <img src={bundle.brand.logoUrl} alt="Brand logo" className="h-24 w-auto rounded-md border object-contain p-2" />
+                  <a href={bundle.brand.logoUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                    Open current logo
+                  </a>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No logo uploaded yet.</p>
+              )}
               <Input
-                value={bundle.brand.logoUrl ?? ""}
-                onChange={(event) =>
-                  setBundle((current) =>
-                    current ? { ...current, brand: { ...current.brand, logoUrl: event.target.value } } : current,
-                  )
-                }
+                type="file"
+                accept="image/*"
+                onChange={handleBrandImageUpload({ type: "logo", usage: "always", brandField: "logoUrl" })}
+                disabled={uploading}
               />
             </div>
             <div className="space-y-2">
-              <Label>Mascot / avatar asset URL</Label>
+              <Label>Mascot / avatar image</Label>
+              {bundle.brand.mascotAssetUrl ? (
+                <div className="space-y-2">
+                  <img src={bundle.brand.mascotAssetUrl} alt="Mascot or avatar" className="h-24 w-auto rounded-md border object-contain p-2" />
+                  <a href={bundle.brand.mascotAssetUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                    Open current mascot / avatar
+                  </a>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No mascot or avatar uploaded yet.</p>
+              )}
               <Input
-                value={bundle.brand.mascotAssetUrl ?? ""}
-                onChange={(event) =>
-                  setBundle((current) =>
-                    current
-                      ? { ...current, brand: { ...current.brand, mascotAssetUrl: event.target.value } }
-                      : current,
-                  )
-                }
+                type="file"
+                accept="image/*"
+                onChange={handleBrandImageUpload({ type: "mascot", usage: "provider_reference", brandField: "mascotAssetUrl" })}
+                disabled={uploading}
               />
             </div>
           </div>
 
           <div className="space-y-3">
             <Label>Reference assets</Label>
-            <Input type="file" onChange={handleUpload} disabled={uploading} />
+            <Input type="file" accept="image/*" onChange={handleReferenceUpload} disabled={uploading} />
             <div className="grid gap-2 md:grid-cols-2">
               {bundle.assets.map((asset) => (
                 <div key={asset.id} className="rounded-lg border p-3 text-sm">
                   <p className="font-medium">{asset.label || asset.type}</p>
                   <p className="text-xs text-muted-foreground">{asset.usage}</p>
+                  {asset.type === "logo" || asset.type === "reference_image" || asset.type === "mascot" || asset.type === "avatar" ? (
+                    <img src={asset.url} alt={asset.label || asset.type} className="mt-2 h-24 w-auto rounded-md border object-contain p-2" />
+                  ) : null}
                   <a href={asset.url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
                     Open asset
                   </a>
