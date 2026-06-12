@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createBrandAsset, updateBrandBundle } from "@/lib/branded-content/repository"
+import { createBrandAsset, deleteBrandAsset, updateBrandBundle } from "@/lib/branded-content/repository"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import type { BrandAssetType, BrandAssetUsage } from "@/lib/branded-content/types"
 
@@ -102,6 +102,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to create brand asset",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const assetId = request.nextUrl.searchParams.get("id")
+    if (!assetId) {
+      return NextResponse.json({ error: "Asset id is required" }, { status: 400 })
+    }
+
+    const bundle = await deleteBrandAsset(assetId)
+    return NextResponse.json({ bundle })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Failed to delete brand asset",
         details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },

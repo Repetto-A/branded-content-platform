@@ -97,7 +97,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport = {
-  themeColor: "#000000",
+  themeColor: "#0a0a0c",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -247,14 +247,14 @@ export default async function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} ${geistPixel.variable}`}
       suppressHydrationWarning
-      style={{ backgroundColor: "#000000" }}
+      style={{ backgroundColor: "#0a0a0c" }}
     >
       <head>
         {/* DNS prefetch for Vercel API (OAuth, token refresh) */}
         <link rel="dns-prefetch" href="https://api.vercel.com" />
         <JsonLd />
       </head>
-      <body className="font-mono antialiased" style={{ backgroundColor: "#000000" }}>
+      <body className="font-sans antialiased" style={{ backgroundColor: "#0a0a0c" }}>
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem('nb_authed')==='1')document.documentElement.classList.add('nb-authed')}catch(e){}`,

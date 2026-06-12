@@ -1,12 +1,13 @@
 "use client"
 
-import type { ChangeEvent } from "react"
 import { useEffect, useState } from "react"
+import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { ImageDropzone } from "@/components/branded-content/image-dropzone"
 import type { BrandAsset, BrandBundle } from "@/lib/branded-content/types"
 
 function parseCsv(input: string) {
@@ -60,8 +61,8 @@ export function BrandEditor() {
     }
   }
 
-  const handleReferenceUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!bundle || !event.target.files?.[0]) return
+  const handleReferenceUpload = async (file: File) => {
+    if (!bundle) return
     setUploading(true)
     setError(null)
     try {
@@ -69,8 +70,8 @@ export function BrandEditor() {
       formData.append("brandId", bundle.brand.id)
       formData.append("type", "reference_image")
       formData.append("usage", "provider_reference")
-      formData.append("label", event.target.files[0].name)
-      formData.append("file", event.target.files[0])
+      formData.append("label", file.name)
+      formData.append("file", file)
       const response = await fetch("/api/brand-assets", {
         method: "POST",
         body: formData,
@@ -96,13 +97,12 @@ export function BrandEditor() {
 
   const handleBrandImageUpload =
     (options: { type: "logo" | "mascot" | "avatar"; usage: "always" | "provider_reference"; brandField: "logoUrl" | "mascotAssetUrl" }) =>
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      if (!bundle || !event.target.files?.[0]) return
+    async (file: File) => {
+      if (!bundle) return
       setUploading(true)
       setError(null)
 
       try {
-        const file = event.target.files[0]
         const formData = new FormData()
         formData.append("brandId", bundle.brand.id)
         formData.append("type", options.type)
@@ -140,16 +140,80 @@ export function BrandEditor() {
       }
     }
 
+  const handleDeleteAsset = async (assetId: string) => {
+    setUploading(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/brand-assets?id=${encodeURIComponent(assetId)}`, {
+        method: "DELETE",
+      })
+      const json = await response.json()
+      if (!response.ok) {
+        throw new Error(json.details || json.error || "Failed to delete asset")
+      }
+      if (json.bundle) setBundle(json.bundle as BrandBundle)
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete asset")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveBrandImage =
+    (field: "logoUrl" | "mascotAssetUrl") => async () => {
+      if (!bundle) return
+      const url = bundle.brand[field]
+      if (!url) return
+
+      // If the image is one of our uploaded assets, delete it (also clears the pointer).
+      const matchingAsset = bundle.assets.find((asset) => asset.url === url)
+      if (matchingAsset) {
+        await handleDeleteAsset(matchingAsset.id)
+        return
+      }
+
+      // Otherwise it's an external/seeded URL — just clear the brand pointer.
+      setUploading(true)
+      setError(null)
+      try {
+        const response = await fetch(`/api/brands/${bundle.brand.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brand: { [field]: null }, profile: {} }),
+        })
+        const json = await response.json()
+        if (!response.ok) {
+          throw new Error(json.details || json.error || "Failed to remove image")
+        }
+        setBundle(json as BrandBundle)
+      } catch (removeError) {
+        setError(removeError instanceof Error ? removeError.message : "Failed to remove image")
+      } finally {
+        setUploading(false)
+      }
+    }
+
   if (!bundle) {
     return <div className="p-8 text-sm text-muted-foreground">Loading brand profile...</div>
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-8">
-      <Card>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10 md:px-8">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <span className="eyebrow">Brand setup</span>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Identidad de <span className="text-brand-gradient">{bundle.brand.name || "tu marca"}</span>
+          </h1>
+        </div>
+        <Button asChild variant="outline" className="rounded-full">
+          <a href="/">← Volver al studio</a>
+        </Button>
+      </div>
+      <Card className="card-elevated">
         <CardHeader>
-          <CardTitle>Brand setup</CardTitle>
-          <CardDescription>Structured context only. No raw brandbook dump by default.</CardDescription>
+          <CardTitle>Perfil de marca</CardTitle>
+          <CardDescription>Contexto estructurado. Tono, estilo visual y assets que guían cada pieza.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
@@ -289,69 +353,79 @@ export function BrandEditor() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Logo</Label>
-              {bundle.brand.logoUrl ? (
-                <div className="space-y-2">
-                  <img src={bundle.brand.logoUrl} alt="Brand logo" className="h-24 w-auto rounded-md border object-contain p-2" />
-                  <a href={bundle.brand.logoUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
-                    Open current logo
-                  </a>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No logo uploaded yet.</p>
-              )}
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleBrandImageUpload({ type: "logo", usage: "always", brandField: "logoUrl" })}
-                disabled={uploading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Mascot / avatar image</Label>
-              {bundle.brand.mascotAssetUrl ? (
-                <div className="space-y-2">
-                  <img src={bundle.brand.mascotAssetUrl} alt="Mascot or avatar" className="h-24 w-auto rounded-md border object-contain p-2" />
-                  <a href={bundle.brand.mascotAssetUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
-                    Open current mascot / avatar
-                  </a>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No mascot or avatar uploaded yet.</p>
-              )}
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleBrandImageUpload({ type: "mascot", usage: "provider_reference", brandField: "mascotAssetUrl" })}
-                disabled={uploading}
-              />
-            </div>
+            <ImageDropzone
+              label="Logo"
+              description="Se incluye en las piezas cuando aplica"
+              value={bundle.brand.logoUrl}
+              uploading={uploading}
+              onFile={handleBrandImageUpload({ type: "logo", usage: "always", brandField: "logoUrl" })}
+              onRemove={handleRemoveBrandImage("logoUrl")}
+            />
+            <ImageDropzone
+              label="Mascota / avatar"
+              description="Personaje de referencia para videos"
+              value={bundle.brand.mascotAssetUrl}
+              uploading={uploading}
+              onFile={handleBrandImageUpload({ type: "mascot", usage: "provider_reference", brandField: "mascotAssetUrl" })}
+              onRemove={handleRemoveBrandImage("mascotAssetUrl")}
+            />
           </div>
 
           <div className="space-y-3">
-            <Label>Reference assets</Label>
-            <Input type="file" accept="image/*" onChange={handleReferenceUpload} disabled={uploading} />
-            <div className="grid gap-2 md:grid-cols-2">
-              {bundle.assets.map((asset) => (
-                <div key={asset.id} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{asset.label || asset.type}</p>
-                  <p className="text-xs text-muted-foreground">{asset.usage}</p>
-                  {asset.type === "logo" || asset.type === "reference_image" || asset.type === "mascot" || asset.type === "avatar" ? (
-                    <img src={asset.url} alt={asset.label || asset.type} className="mt-2 h-24 w-auto rounded-md border object-contain p-2" />
-                  ) : null}
-                  <a href={asset.url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
-                    Open asset
-                  </a>
-                </div>
-              ))}
-            </div>
+            <ImageDropzone
+              label="Assets de referencia"
+              description="Imágenes que guían el estilo visual"
+              uploading={uploading}
+              onFile={handleReferenceUpload}
+            />
+            {bundle.assets.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {bundle.assets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="group relative overflow-hidden rounded-xl border border-border bg-card/40 transition-colors hover:border-brand/40"
+                  >
+                    <button
+                      type="button"
+                      aria-label={`Borrar ${asset.label || asset.type}`}
+                      disabled={uploading}
+                      onClick={() => handleDeleteAsset(asset.id)}
+                      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground opacity-0 backdrop-blur transition-all hover:border-destructive/50 hover:text-destructive group-hover:opacity-100 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <a href={asset.url} target="_blank" rel="noreferrer" className="block">
+                      {asset.type === "logo" || asset.type === "reference_image" || asset.type === "mascot" || asset.type === "avatar" ? (
+                        <img
+                          src={asset.url}
+                          alt={asset.label || asset.type}
+                          className="aspect-video w-full bg-input/40 object-contain p-2 transition-transform group-hover:scale-[1.02]"
+                        />
+                      ) : null}
+                      <div className="space-y-0.5 p-3">
+                        <p className="truncate text-sm font-medium">{asset.label || asset.type}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{asset.usage}</p>
+                      </div>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
 
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save brand"}
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            size="lg"
+            className="brand-gradient font-medium text-white shadow-lg transition-opacity hover:opacity-90"
+          >
+            {saving ? "Guardando…" : "Guardar marca"}
           </Button>
         </CardContent>
       </Card>

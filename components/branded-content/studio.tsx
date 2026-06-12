@@ -13,6 +13,24 @@ import type { Brand, CreativeOutputType, CreativeRequest } from "@/lib/branded-c
 
 const FORMATS = ["1:1", "4:5", "9:16", "16:9"]
 
+const STATUS_STYLES: Record<string, { dot: string; label: string }> = {
+  queued: { dot: "bg-amber-400", label: "queued" },
+  running: { dot: "bg-sky-400 animate-pulse", label: "running" },
+  completed: { dot: "bg-emerald-400", label: "completed" },
+  succeeded: { dot: "bg-emerald-400", label: "succeeded" },
+  failed: { dot: "bg-destructive", label: "failed" },
+}
+
+function StatusDot({ status }: { status: string }) {
+  const style = STATUS_STYLES[status] ?? { dot: "bg-muted-foreground", label: status }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+      {style.label}
+    </span>
+  )
+}
+
 export function BrandedStudio() {
   const router = useRouter()
   const [brands, setBrands] = useState<Brand[]>([])
@@ -95,23 +113,40 @@ export function BrandedStudio() {
     }
   }
 
+  const selectedBrand = brands.find((brand) => brand.id === brandId)
+
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-8">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Branded Content Studio</h1>
-            <p className="text-sm text-muted-foreground">
-              Hashi-powered generation with a provider-switchable custom product layer.
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-10 md:px-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-3">
+            <span className="eyebrow">Viva Studio · AI Content Engine</span>
+            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
+              Branded Content <span className="text-brand-gradient">Studio</span>
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Generá imágenes, carruseles y videos con avatar fieles a tu marca. Tu identidad, tono y
+              assets en cada pieza — sin partir de cero.
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/brand">Brand setup</Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            {selectedBrand?.logoUrl ? (
+              <span className="flex h-11 items-center gap-2 rounded-full border border-border bg-card/60 px-3 backdrop-blur">
+                <img
+                  src={selectedBrand.logoUrl}
+                  alt={selectedBrand.name}
+                  className="h-6 w-auto max-w-24 object-contain"
+                />
+              </span>
+            ) : null}
+            <Button asChild variant="outline" className="h-11 rounded-full px-5">
+              <Link href="/brand">Brand setup</Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_380px]">
-          <Card>
+          <Card className="card-elevated">
             <CardHeader>
               <CardTitle>Create request</CardTitle>
               <CardDescription>{helperCopy}</CardDescription>
@@ -210,15 +245,24 @@ export function BrandedStudio() {
                 </div>
               )}
 
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              {error ? (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
 
-              <Button onClick={handleSubmit} disabled={submitting || !brandId}>
-                {submitting ? "Creating request..." : "Run workflow"}
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || !brandId}
+                size="lg"
+                className="brand-gradient w-full font-medium text-white shadow-lg transition-opacity hover:opacity-90 sm:w-auto"
+              >
+                {submitting ? "Creando request..." : "Run workflow"}
               </Button>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-elevated">
             <CardHeader>
               <CardTitle>Recent requests</CardTitle>
               <CardDescription>Tracked in Supabase, not localStorage.</CardDescription>
@@ -231,13 +275,16 @@ export function BrandedStudio() {
                   <Link
                     key={request.id}
                     href={`/requests/${request.id}`}
-                    className="block rounded-lg border p-3 transition-colors hover:bg-muted/40"
+                    className="block rounded-xl border border-border bg-card/40 p-3 transition-colors hover:border-brand/40 hover:bg-muted/40"
                   >
-                    <div className="space-y-1">
-                      <p className="line-clamp-2 text-sm font-medium">{request.userPrompt}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {request.outputType} • {request.status}
-                      </p>
+                    <div className="space-y-2">
+                      <p className="line-clamp-2 text-sm font-medium leading-snug">{request.userPrompt}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {request.outputType}
+                        </span>
+                        <StatusDot status={request.status} />
+                      </div>
                     </div>
                   </Link>
                 ))

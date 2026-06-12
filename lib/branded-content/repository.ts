@@ -250,6 +250,51 @@ export async function createBrandAsset(input: Omit<BrandAsset, "id" | "createdAt
   return mapBrandAsset(data)
 }
 
+/** Extracts the storage object path from a public Supabase Storage URL. */
+function storagePathFromPublicUrl(url: string, bucket: string): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`
+  const index = url.indexOf(marker)
+  if (index === -1) return null
+  return decodeURIComponent(url.slice(index + marker.length))
+}
+
+export async function deleteBrandAsset(assetId: string) {
+  const supabase = getSupabaseServerClient()
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || "branded-content"
+
+  const { data: row, error: fetchError } = await supabase
+    .from("brand_assets")
+    .select("*")
+    .eq("id", assetId)
+    .single()
+  if (fetchError) throw fetchError
+
+  const asset = mapBrandAsset(row)
+
+  // Best-effort: remove the underlying storage object when it lives in our bucket.
+  const objectPath = storagePathFromPublicUrl(asset.url, bucket)
+  if (objectPath) {
+    await supabase.storage.from(bucket).remove([objectPath])
+  }
+
+  // Clear brand logo/mascot pointers if they referenced this exact asset.
+  const { data: brandRow } = await supabase.from("brands").select("*").eq("id", asset.brandId).single()
+  if (brandRow) {
+    const patch: Record<string, unknown> = {}
+    if (brandRow.logo_url === asset.url) patch.logo_url = null
+    if (brandRow.mascot_asset_url === asset.url) patch.mascot_asset_url = null
+    if (Object.keys(patch).length > 0) {
+      patch.updated_at = new Date().toISOString()
+      await supabase.from("brands").update(patch).eq("id", asset.brandId)
+    }
+  }
+
+  const { error: deleteError } = await supabase.from("brand_assets").delete().eq("id", assetId)
+  if (deleteError) throw deleteError
+
+  return getBrandBundle(asset.brandId)
+}
+
 export async function createCreativeRequest(input: CreativeRequestInput) {
   const supabase = getSupabaseServerClient()
   const now = new Date().toISOString()
